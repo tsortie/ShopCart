@@ -79,10 +79,14 @@ jobs:
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
-          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o $RUNNER_TEMP/AuthKey.p8
+          # 1. Decode the private key to a temporary location
+          mkdir -p ./private_keys
+          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o ./private_keys/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8
+
+          # 2. Use the modern xcrun dittool/distribution tool asset upload syntax
           xcrun altool --upload-app \
             --type ios \
-            --file $RUNNER_TEMP/export/GroceryList.ipa \
+            --file "$RUNNER_TEMP/export/GroceryList.ipa" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-            --private-key $RUNNER_TEMP/AuthKey.p8
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+
