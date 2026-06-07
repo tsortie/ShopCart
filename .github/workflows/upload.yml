@@ -58,7 +58,7 @@ jobs:
       - name: Build and Archive
         run: |
           xcodebuild archive \
-            -project GroceryList.xcodeproj \
+            -project "GroceryList 1.1/GroceryList.xcodeproj"
             -scheme GroceryList \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/ShopCart.xcarchive \
