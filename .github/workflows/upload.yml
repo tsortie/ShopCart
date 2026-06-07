@@ -11,6 +11,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set Xcode Version
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
       - name: Install Apple Certificate
         env:
           CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
