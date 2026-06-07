@@ -20,17 +20,17 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
           echo "Decoding certificate..."
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/certificate.p12
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/ShopCart.p12
           echo "Certificate decoded, checking file..."
-          ls -la $RUNNER_TEMP/certificate.p12
-          file $RUNNER_TEMP/certificate.p12
+          ls -la $RUNNER_TEMP/ShopCart.p12
+          file $RUNNER_TEMP/ShopCart.p12
           echo "Creating keychain..."
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "temporary" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "temporary" $KEYCHAIN_PATH
           echo "Importing certificate..."
-          security import $RUNNER_TEMP/certificate.p12 \
+          security import $RUNNER_TEMP/ShopCart.p12 \
             -P "$CERTIFICATE_PASSWORD" \
             -A \
             -t cert \
