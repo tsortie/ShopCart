@@ -3,48 +3,31 @@ name: Upload to App Store
 on:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   upload:
-    runs-on: macos-latest
+    runs-on: macos-15
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Xcode Version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.0'
 
       - name: Install Apple Certificate
         env:
           CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
-          echo "Decoding certificate..."
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/certificate.p12
-          echo "Certificate decoded, checking file..."
-          ls -la $RUNNER_TEMP/certificate.p12
-          file $RUNNER_TEMP/certificate.p12
-          echo "Creating keychain..."
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          security create-keychain -p "temporary" $KEYCHAIN_PATH
+          security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "temporary" $KEYCHAIN_PATH
-          echo "Importing certificate..."
-          security import $RUNNER_TEMP/certificate.p12 \
-            -P "$CERTIFICATE_PASSWORD" \
-            -A \
-            -t cert \
-            -f pkcs12 \
-            -k $KEYCHAIN_PATH \
-            --allow-any-root
-          echo "Setting key partition list..."
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: \
-            -s \
-            -k "temporary" \
-            $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH login.keychain
-          echo "Certificate installation complete"
+          security unlock-keychain -p "" $KEYCHAIN_PATH
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
 
       - name: Install Provisioning Profile
         env:
@@ -58,7 +41,7 @@ jobs:
       - name: Build and Archive
         run: |
           xcodebuild archive \
-            -project "GroceryList 1.1/GroceryList.xcodeproj"
+            -project GroceryList/GroceryList.xcodeproj \
             -scheme GroceryList \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/ShopCart.xcarchive \
@@ -75,13 +58,18 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>teamID</key>
-            <string>YOUR_TEAM_ID</string>
+            <string>NMUNAF53M3</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
             <true/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.toddfeliciano.ShopCart</key>
+              <string>ShopCart AppStore</string>
+            </dict>
           </dict>
           </plist>
           EOF
@@ -96,10 +84,14 @@ jobs:
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
-          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o $RUNNER_TEMP/AuthKey.p8
+          # 1. Decode the private key to a temporary location
+          mkdir -p ./private_keys
+          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o ./private_keys/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8
+
+          # 2. Use the modern xcrun dittool/distribution tool asset upload syntax
           xcrun altool --upload-app \
             --type ios \
-            --file $RUNNER_TEMP/export/ShopCart.ipa \
+            --file "$RUNNER_TEMP/export/GroceryList.ipa" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-            --private-key $RUNNER_TEMP/AuthKey.p8
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+
