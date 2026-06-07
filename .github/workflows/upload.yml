@@ -82,7 +82,7 @@ jobs:
           echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o $RUNNER_TEMP/AuthKey.p8
           xcrun altool --upload-app \
             --type ios \
-            --file $RUNNER_TEMP/export/ShopCart.ipa \
+            --file $RUNNER_TEMP/export/GroceryList.ipa \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
             --private-key $RUNNER_TEMP/AuthKey.p8
