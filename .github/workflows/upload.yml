@@ -53,13 +53,18 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>teamID</key>
             <string>NMUNAF53M3</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
             <true/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.toddfeliciano.ShopCart</key>
+              <string>ShopCart AppStore</string>
+            </dict>
           </dict>
           </plist>
           EOF
