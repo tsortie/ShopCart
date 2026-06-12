@@ -25,7 +25,7 @@ struct GroceryItemRow: View {
 
                 if item.isExpanded && item.hasSubItems {
                     VStack(spacing: 0) {
-                        ForEach(item.subItems) { sub in
+                        ForEach(item.sortedSubItems) { sub in
                             SubItemRow(subItem: sub, itemID: item.id, viewModel: viewModel)
                             if sub.id != item.subItems.last?.id {
                                 Divider().padding(.leading, 50)
@@ -294,7 +294,10 @@ struct AddSubItemInline: View {
 
     private func submit() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else {
+            withAnimation { isShowing = false }
+            return
+        }
         onAdd(trimmed, quantity)
         name = ""
         quantity = 1

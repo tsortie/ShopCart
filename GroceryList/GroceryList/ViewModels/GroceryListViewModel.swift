@@ -1,11 +1,19 @@
 import Foundation
 
 @MainActor
+extension GroceryItem {
+    var sortedSubItems: [SubItem] {
+        subItems.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+}
 class GroceryListViewModel: ObservableObject {
 
     @Published var lists: [GroceryList] = []
     @Published var selectedListIndex: Int = 0
     @Published var searchText: String = ""
+    
 
     private let persistenceKey = "grocery_lists_v2"
 
@@ -47,6 +55,7 @@ class GroceryListViewModel: ObservableObject {
         filteredItems.filter { $0.isActive }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
+    
 
     // MARK: - Sharing
     func exportAsDeepLink() -> URL? {
