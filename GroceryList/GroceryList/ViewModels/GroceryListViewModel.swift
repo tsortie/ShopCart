@@ -61,9 +61,10 @@ class GroceryListViewModel: ObservableObject {
     func exportAsDeepLink() -> URL? {
         guard let data = try? JSONEncoder().encode(list),
               let base64 = data.base64EncodedString()
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let name = list.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
         else { return nil }
-        return URL(string: "shopcart://import?data=\(base64)")
+        return URL(string: "https://tsortie.github.io/ShopCart/import.html?name=\(name)&data=\(base64)")
     }
 
     func importFromDeepLink(url: URL) {
