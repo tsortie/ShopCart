@@ -1,0 +1,13 @@
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appIDs": ["TEAMID.com.yourcompany.ShopCart"],
+                "components": [
+                    { "/": "/ShopCart/*" }
+                ]
+            }
+        ]
+    }
+}
