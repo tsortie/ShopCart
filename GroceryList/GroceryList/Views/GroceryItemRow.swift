@@ -272,10 +272,9 @@ struct AddSubItemInline: View {
             Button(action: submit) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 22))
-                    .foregroundColor(name.isEmpty ? .secondary : AppTheme.primary)
+                    .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
 
             Button {
                 withAnimation { isShowing = false }

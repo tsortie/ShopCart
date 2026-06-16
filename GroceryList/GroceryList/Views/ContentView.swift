@@ -3,6 +3,10 @@ import SwiftUI
 struct ContentView: View {
     
     @ObservedObject var viewModel: GroceryListViewModel
+    @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
+    @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
+    @State private var showSwipeHint: Bool = false
+    @State private var showSubItemHint: Bool = false
     @State private var showUndoBanner: Bool = false
     @State private var undoTask: Task<Void, Never>? = nil
     @State private var showImportPicker: Bool = false
@@ -46,6 +50,18 @@ struct ContentView: View {
             undoBanner
                 .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showUndoBanner)
         }
+        .overlay(alignment: .bottom) {
+            if showSwipeHint {
+                hintBanner(text: "Swipe left on an item to delete it", icon: "arrow.left")
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSwipeHint)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showSubItemHint {
+                hintBanner(text: "Tap + on a row to add sub-items", icon: "plus.circle")
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSubItemHint)
+            }
+        }
         .sheet(isPresented: $showAddList) { addListSheet }
         .sheet(isPresented: $showRenameList) { renameListSheet }
     }
@@ -76,6 +92,29 @@ struct ContentView: View {
             .padding(.bottom, 90)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+    }
+    // MARK: - Contextual hint banner
+    @ViewBuilder
+    private func hintBanner(text: String, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(AppTheme.primary)
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.1), radius: 6, y: 2)
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 100)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
     // MARK: - List view (one per tab)
     @ViewBuilder
@@ -134,6 +173,15 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        Menu {
+                            Label("Swipe left on an item/subitem to delete", systemImage: "trash.fill")
+                            Label("Tap + on a row to add sub-items", systemImage: "plus.circle")
+                            Label("Tap + in the bottom bar for a new list", systemImage: "plus.circle.fill")
+                            Label("Search for a list item in the top bar", systemImage: "magnifyingglass")
+                            Label("AirDrop/Text lists with a ShopCart user", systemImage: "square.and.arrow.up")
+                        } label: {
+                            Label("Actions", systemImage: "questionmark.circle")
+                        }
                         Button {
                             renameText = viewModel.list.name
                             showRenameList = true
@@ -373,10 +421,16 @@ struct ContentView: View {
             Button(action: commitAddItem) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 22))
-                    .foregroundColor(newItemName.trimmingCharacters(in: .whitespaces).isEmpty ? Color(.systemGray4) : AppTheme.primary)
+                    .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+            
+            Button(action: cancelAddItem) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 14)
@@ -396,12 +450,17 @@ struct ContentView: View {
 
     private func commitAddItem() {
         let trimmed = newItemName.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty {
-            withAnimation(.spring(response: 0.2)) {
-                viewModel.addItem(name: trimmed, quantity: newItemQuantity)
-            }
+        guard !trimmed.isEmpty else {
+            cancelAddItem()
+            return
         }
-        cancelAddItem()
+        withAnimation(.spring(response: 0.2)) {
+            viewModel.addItem(name: trimmed, quantity: newItemQuantity)
+        }
+        triggerHintsIfNeeded()   // ← add this line
+        newItemName = ""
+        newItemQuantity = 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { addFieldFocused = true }
     }
 
     private func cancelAddItem() {
@@ -417,6 +476,30 @@ struct ContentView: View {
         withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { isAddingItem = false }
         newItemName = ""
         newItemQuantity = 1
+    }
+    
+    private func triggerHintsIfNeeded() {
+        // Show swipe hint after first item is added
+        if !hasSeenSwipeHint {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation { showSwipeHint = true }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                withAnimation { showSwipeHint = false }
+                hasSeenSwipeHint = true
+            }
+        }
+
+        // Show sub-item hint after second item is added
+        if !hasSeenSubItemHint && viewModel.list.items.count >= 2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation { showSubItemHint = true }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                withAnimation { showSubItemHint = false }
+                hasSeenSubItemHint = true
+            }
+        }
     }
 
     private func commitAddList() {

@@ -80,14 +80,24 @@ struct EmptyStateView: View {
                 .font(.system(size: 56, weight: .light))
                 .foregroundColor(Color(.systemGray4).opacity(0.6))
 
-            Text("Your list is empty")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundColor(.secondary)
+            VStack(spacing: 6) {
+                Text("Your list is empty")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
 
-            Text("Tap the + button to add your first item")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary.opacity(0.8))
-                .multilineTextAlignment(.center)
+                Text("Tap + Add Item below to get started")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 13))
+                Text("Tap the menu in the top right to learn more")
+                    .font(.system(size: 13))
+            }
+            .foregroundColor(.secondary.opacity(0.7))
         }
         .padding(40)
         .frame(maxWidth: .infinity)
