@@ -43,8 +43,56 @@
         <p id="listName">Loading list...</p>
         <a id="openBtn" class="loading" href="#">Loading...</a>
     </div>
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get("id");
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const z = params.get("z");
 
-        async
+    async function buildLink() {
+        if (!z) {
+            document.getElementById("listName").textContent = "Invalid link";
+            return;
+        }
+        try {
+            // Convert base64url back to standard base64
+            let base64 = z.replace(/-/g, '+').replace(/_/g, '/');
+            const remainder = base64.length % 4;
+            if (remainder > 0) base64 += '='.repeat(4 - remainder);
+
+            // Decode base64 to bytes
+            const binary = atob(base64);
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+
+            // Decompress using DecompressionStream (deflate-raw for zlib)
+            const stream = new DecompressionStream('deflate-raw');
+            const writer = stream.writable.getWriter();
+            writer.write(bytes);
+            writer.close();
+            const reader = stream.readable.getReader();
+            const chunks = [];
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+            }
+            const json = new TextDecoder().decode(
+                new Uint8Array(chunks.reduce((a, b) => [...a, ...b], []))
+            );
+
+            const parsed = JSON.parse(json);
+            const name = parsed.name || "a list";
+            const encoded = btoa(unescape(encodeURIComponent(json)));
+            const deepLink = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encoded;
+
+            const btn = document.getElementById("openBtn");
+            btn.href = deepLink;
+            btn.textContent = "Open in ShopCart";
+            btn.classList.remove("loading");
+            document.getElementById("listName").textContent = "\"" + name + "\"";
+        } catch (e) {
+            console.error(e);
+            document.getElementById("listName").textContent = "Failed to load list";
+            document.getElementById("openBtn").textContent = "Error";
+        }
+    }
+    buildLink();
+</script>
