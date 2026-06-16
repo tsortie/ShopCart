@@ -3,14 +3,22 @@
 <head>
     <title>Opening ShopCart...</title>
     <script>
-        const params = window.location.search;
-        window.location.href = "shopcart://import" + params;
+        async function redirect() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+            
+            if (id) {
+                const response = await fetch("https://jsonblob.com/api/jsonBlob/" + id);
+                const json = await response.text();
+                const encoded = btoa(json);
+                const name = JSON.parse(json).name || "";
+                window.location.href = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encoded;
+            }
+        }
+        redirect();
     </script>
 </head>
 <body>
-    <p>Opening ShopCart... <a id="link" href="#">click here if it doesn't open automatically</a></p>
-    <script>
-        document.getElementById("link").href = "shopcart://import" + window.location.search;
-    </script>
+    <p>Opening ShopCart...</p>
 </body>
 </html>
