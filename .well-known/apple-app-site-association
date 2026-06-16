@@ -3,7 +3,7 @@
         "apps": [],
         "details": [
             {
-                "appIDs": ["TEAMID.com.yourcompany.ShopCart"],
+                "appIDs": ["NMUNAF53M3.com.toddfeliciano.ShopCart"],
                 "components": [
                     { "/": "/ShopCart/*" }
                 ]
