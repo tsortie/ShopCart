@@ -11,6 +11,8 @@ struct GroceryListApp: App {
                 .onOpenURL { url in
                     if url.scheme == "grocerylist" && url.host == "import" {
                         viewModel.importFromDeepLink(url: url)
+                    } else if url.host == "tsortie.github.io" && url.path.hasPrefix("/ShopCart/import") {
+                        viewModel.importFromDeepLink(url: url)
                     } else {
                         // Handle file import (existing behavior)
                         viewModel.importList(from: url)

@@ -5,6 +5,9 @@ struct ContentView: View {
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
+    @State private var isShorteningURL: Bool = false
+    @State private var shareItems: [Any] = []
+    @State private var showShareSheet: Bool = false
     @State private var showSwipeHint: Bool = false
     @State private var showSubItemHint: Bool = false
     @State private var showUndoBanner: Bool = false
@@ -64,6 +67,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAddList) { addListSheet }
         .sheet(isPresented: $showRenameList) { renameListSheet }
+        .sheet(isPresented: $showShareSheet) {
+            ActivityView(items: shareItems)
+        }
     }
     // MARK: - Undo Delete
     @ViewBuilder
@@ -189,12 +195,17 @@ struct ContentView: View {
                             Label("Rename List", systemImage: "pencil")
                         }
 
-                        if let url = viewModel.exportAsDeepLink() {
-                            ShareLink(item: url) {
+                        Button {
+                            shareList()
+                        } label: {
+                            if isShorteningURL {
+                                Label("Sharing...", systemImage: "hourglass")
+                            } else {
                                 Label("Share List", systemImage: "square.and.arrow.up")
                             }
                         }
-
+                        .disabled(isShorteningURL)
+                        
                         Button {
                             showImportPicker = true
                         } label: {
@@ -518,6 +529,36 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             viewModel.renameList(id: viewModel.list.id, name: trimmed)
         }
+    }
+    private func shareList() {
+        guard let url = viewModel.exportAsDeepLink() else { return }
+        isShorteningURL = true
+        Task {
+            let finalURL = await shortenURL(url)
+            await MainActor.run {
+                isShorteningURL = false
+                let message = "Join my ShopCart list \"\(viewModel.list.name)\" 🛒"
+                shareItems = [message, finalURL]
+                showShareSheet = true
+            }
+        }
+    }
+
+    private func shortenURL(_ url: URL) async -> URL {
+        guard let encoded = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let apiURL = URL(string: "https://tinyurl.com/api-create.php?url=\(encoded)") else { return url }
+        guard let data = try? await URLSession.shared.data(from: apiURL).0,
+              let short = String(data: data, encoding: .utf8),
+              let shortURL = URL(string: short.trimmingCharacters(in: .whitespacesAndNewlines)) else { return url }
+        return shortURL
+    }
+
+    struct ActivityView: UIViewControllerRepresentable {
+        let items: [Any]
+        func makeUIViewController(context: Context) -> UIActivityViewController {
+            UIActivityViewController(activityItems: items, applicationActivities: nil)
+        }
+        func updateUIViewController(_ uvc: UIActivityViewController, context: Context) {}
     }
 
     // MARK: - Search bar
