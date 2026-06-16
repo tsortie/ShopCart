@@ -24,7 +24,7 @@
         }
         h2 { margin: 0 0 8px; font-size: 20px; }
         p { color: #6e6e73; font-size: 15px; margin: 0 0 24px; }
-        a {
+        #openBtn {
             display: inline-block;
             background: #34C759;
             color: white;
@@ -34,29 +34,17 @@
             font-size: 17px;
             font-weight: 600;
         }
+        #openBtn.loading { background: #aeaeb2; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>ShopCart</h2>
-        <p id="listName">You've been sent a list</p>
-        <a id="openBtn" href="#">Open in ShopCart</a>
+        <p id="listName">Loading list...</p>
+        <a id="openBtn" class="loading" href="#">Loading...</a>
     </div>
     <script>
         const params = new URLSearchParams(window.location.search);
         const id = params.get("id");
 
-        async function buildLink() {
-            if (!id) return;
-            const response = await fetch("https://jsonblob.com/api/jsonBlob/" + id);
-            const json = await response.text();
-            const parsed = JSON.parse(json);
-            const encoded = btoa(unescape(encodeURIComponent(json)));
-            const name = parsed.name || "a list";
-            document.getElementById("listName").textContent = "\"" + name + "\"";
-            document.getElementById("openBtn").href = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encoded;
-        }
-        buildLink();
-    </script>
-</body>
-</html>
+        async
