@@ -68,11 +68,41 @@ class GroceryListViewModel: ObservableObject {
     }
 
     func importFromDeepLink(url: URL) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value,
-              let data = Data(base64Encoded: dataParam),
-              var imported = try? JSONDecoder().decode(GroceryList.self, from: data)
-        else { return }
+        print("✅ importFromDeepLink called with: \(url.absoluteString.prefix(100))")
+        
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            print("❌ Failed to parse URL components")
+            return
+        }
+        
+        print("✅ Query items: \(components.queryItems ?? [])")
+        
+        guard let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value else {
+            print("❌ No data parameter found")
+            return
+        }
+        
+        print("✅ Data param length: \(dataParam.count)")
+        
+        var base64 = dataParam
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 { base64 += String(repeating: "=", count: 4 - remainder) }
+        
+        guard let data = Data(base64Encoded: base64) else {
+            print("❌ Failed to decode base64")
+            return
+        }
+        
+        print("✅ Decoded data length: \(data.count)")
+        
+        guard var imported = try? JSONDecoder().decode(GroceryList.self, from: data) else {
+            print("❌ Failed to decode GroceryList")
+            return
+        }
+        
+        print("✅ Imported list: \(imported.name)")
         imported.id = UUID()
         lists.append(imported)
         selectedListIndex = lists.count - 1

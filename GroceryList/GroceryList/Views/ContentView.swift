@@ -5,9 +5,7 @@ struct ContentView: View {
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
-    @State private var isShorteningURL: Bool = false
-    @State private var shareItems: [Any] = []
-    @State private var showShareSheet: Bool = false
+    @State private var isSharing: Bool = false
     @State private var showSwipeHint: Bool = false
     @State private var showSubItemHint: Bool = false
     @State private var showUndoBanner: Bool = false
@@ -65,11 +63,30 @@ struct ContentView: View {
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSubItemHint)
             }
         }
+        .overlay {
+            if isSharing {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(1.2)
+                        Text("Preparing share link...")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                            .fill(Color(.darkGray))
+                    )
+                }
+            }
+        }
         .sheet(isPresented: $showAddList) { addListSheet }
         .sheet(isPresented: $showRenameList) { renameListSheet }
-        .sheet(isPresented: $showShareSheet) {
-            ActivityView(items: shareItems)
-        }
     }
     // MARK: - Undo Delete
     @ViewBuilder
@@ -194,17 +211,12 @@ struct ContentView: View {
                         } label: {
                             Label("Rename List", systemImage: "pencil")
                         }
-
+                        
                         Button {
                             shareList()
                         } label: {
-                            if isShorteningURL {
-                                Label("Sharing...", systemImage: "hourglass")
-                            } else {
-                                Label("Share List", systemImage: "square.and.arrow.up")
-                            }
+                            Label("Share List", systemImage: "square.and.arrow.up")
                         }
-                        .disabled(isShorteningURL)
                         
                         Button {
                             showImportPicker = true
@@ -531,34 +543,67 @@ struct ContentView: View {
         }
     }
     private func shareList() {
-        guard let url = viewModel.exportAsDeepLink() else { return }
-        isShorteningURL = true
+        guard let data = try? JSONEncoder().encode(viewModel.list),
+              let json = String(data: data, encoding: .utf8) else { return }
+        
+        isSharing = true
+        print("Starting Share")
+        
         Task {
-            let finalURL = await shortenURL(url)
-            await MainActor.run {
-                isShorteningURL = false
-                let message = "Join my ShopCart list \"\(viewModel.list.name)\" 🛒"
-                shareItems = [message, finalURL]
-                showShareSheet = true
+            guard let url = URL(string: "https://api.github.com/gists") else {
+                await MainActor.run { isSharing = false }
+                return
+            }
+            
+            guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+                  let dict = NSDictionary(contentsOfFile: path),
+                  let token = dict["GitHubToken"] as? String else {
+                await MainActor.run { isSharing = false }
+                return
+            }
+            print("✅ Token loaded: \(token.prefix(8))...")
+            
+            let body: [String: Any] = [
+                "public": false,
+                "files": ["list.json": ["content": json]]
+            ]
+            
+            guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
+                await MainActor.run { isSharing = false }
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.httpBody = bodyData
+            
+            guard let (responseData, response) = try? await URLSession.shared.data(for: request),
+                  let httpResponse = response as? HTTPURLResponse,
+                  let jsonResponse = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+                  let gistID = jsonResponse["id"] as? String else {
+                await MainActor.run { isSharing = false }
+                return
+            }
+            
+            print("✅ Status: \(httpResponse.statusCode), Gist ID: \(gistID)")
+            
+            let shareURL = URL(string: "https://tsortie.github.io/ShopCart/import.html?gist=\(gistID)")!
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isSharing = false
+                let av = UIActivityViewController(activityItems: [shareURL], applicationActivities: nil)
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let root = windowScene.windows.first?.rootViewController {
+                    var topVC = root
+                    while let presented = topVC.presentedViewController {
+                        topVC = presented
+                    }
+                    topVC.present(av, animated: true)
+                }
             }
         }
-    }
-
-    private func shortenURL(_ url: URL) async -> URL {
-        guard let encoded = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let apiURL = URL(string: "https://tinyurl.com/api-create.php?url=\(encoded)") else { return url }
-        guard let data = try? await URLSession.shared.data(from: apiURL).0,
-              let short = String(data: data, encoding: .utf8),
-              let shortURL = URL(string: short.trimmingCharacters(in: .whitespacesAndNewlines)) else { return url }
-        return shortURL
-    }
-
-    struct ActivityView: UIViewControllerRepresentable {
-        let items: [Any]
-        func makeUIViewController(context: Context) -> UIActivityViewController {
-            UIActivityViewController(activityItems: items, applicationActivities: nil)
-        }
-        func updateUIViewController(_ uvc: UIActivityViewController, context: Context) {}
     }
 
     // MARK: - Search bar

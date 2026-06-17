@@ -9,12 +9,9 @@ struct GroceryListApp: App {
             ContentView(viewModel: viewModel)
                 .tint(Color("AppGreen"))
                 .onOpenURL { url in
-                    if url.scheme == "grocerylist" && url.host == "import" {
-                        viewModel.importFromDeepLink(url: url)
-                    } else if url.host == "tsortie.github.io" && url.path.hasPrefix("/ShopCart/import") {
+                    if url.scheme == "shopcart" && url.host == "import" {
                         viewModel.importFromDeepLink(url: url)
                     } else {
-                        // Handle file import (existing behavior)
                         viewModel.importList(from: url)
                     }
                 }
