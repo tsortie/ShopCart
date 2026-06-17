@@ -59,9 +59,10 @@
             const parsed = JSON.parse(json);
             const name = parsed.name || "a list";
             const encoded = btoa(unescape(encodeURIComponent(json)));
-            const deepLink = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encoded;
+            const deepLink = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encodeURIComponent(encoded);
 
             const btn = document.getElementById("openBtn");
+            console.log("Deep link:", deepLink.substring(0, 100));
             btn.href = deepLink;
             btn.textContent = "Open in ShopCart";
             btn.classList.remove("loading");
