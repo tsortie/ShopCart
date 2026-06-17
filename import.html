@@ -58,11 +58,8 @@
             const json = gist.files["list.json"].content;
             const parsed = JSON.parse(json);
             const name = parsed.name || "a list";
-            const encoded = btoa(unescape(encodeURIComponent(json)))
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=/g, '');
-            const deepLink = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encoded;
+            const encoded = btoa(unescape(encodeURIComponent(json)));
+            const deepLink = "shopcart://import?name=" + encodeURIComponent(name) + "&data=" + encodeURIComponent(encoded);
 
             const btn = document.getElementById("openBtn");
             console.log("Deep link:", deepLink.substring(0, 100));
