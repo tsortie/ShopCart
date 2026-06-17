@@ -6,6 +6,7 @@ struct ContentView: View {
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
     @State private var isSharing: Bool = false
+    @State private var draggingListID: UUID? = nil
     @State private var showSwipeHint: Bool = false
     @State private var showSubItemHint: Bool = false
     @State private var showUndoBanner: Bool = false
@@ -277,8 +278,30 @@ struct ContentView: View {
                                         Capsule()
                                             .fill(viewModel.selectedListIndex == index ? AppTheme.primary : AppTheme.primary.opacity(0.1))
                                     )
+                                    .opacity(draggingListID == groceryList.id ? 0.5 : 1.0)
                             }
                             .buttonStyle(.plain)
+                            .draggable(groceryList.id.uuidString) {
+                                Text(groceryList.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Capsule().fill(AppTheme.primary))
+                            }
+                            .dropDestination(for: String.self) { items, _ in
+                                guard let droppedID = items.first,
+                                      let sourceIndex = viewModel.lists.firstIndex(where: { $0.id.uuidString == droppedID }),
+                                      let destIndex = viewModel.lists.firstIndex(where: { $0.id == groceryList.id }) else { return false }
+                                withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                                    viewModel.moveList(from: sourceIndex, to: destIndex)
+                                }
+                                return true
+                            }
+                            .onDrag {
+                                draggingListID = groceryList.id
+                                return NSItemProvider(object: groceryList.id.uuidString as NSString)
+                            }
                         }
                     }
                     .padding(.horizontal, 12)

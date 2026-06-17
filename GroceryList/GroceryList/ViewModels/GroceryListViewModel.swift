@@ -66,7 +66,18 @@ class GroceryListViewModel: ObservableObject {
         else { return nil }
         return URL(string: "https://tsortie.github.io/ShopCart/import.html?name=\(name)&data=\(base64)")
     }
-
+    
+    func moveList(from source: Int, to destination: Int) {
+        guard source != destination else { return }
+        let currentID = lists[selectedListIndex].id
+        lists.move(fromOffsets: IndexSet(integer: source), toOffset: destination > source ? destination + 1 : destination)
+        // Keep selected list in sync
+        if let newIndex = lists.firstIndex(where: { $0.id == currentID }) {
+            selectedListIndex = newIndex
+        }
+        save()
+    }
+    
     func importFromDeepLink(url: URL) {
         print("✅ importFromDeepLink called with: \(url.absoluteString.prefix(100))")
         
