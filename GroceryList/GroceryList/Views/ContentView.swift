@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var newItemQuantity: Int = 1
     @FocusState private var addFieldFocused: Bool
     @FocusState private var addListFieldFocused: Bool
+    private let feedbackGenerator = UISelectionFeedbackGenerator()
 
     var body: some View {
         ZStack {
@@ -278,7 +279,6 @@ struct ContentView: View {
                                         Capsule()
                                             .fill(viewModel.selectedListIndex == index ? AppTheme.primary : AppTheme.primary.opacity(0.1))
                                     )
-                                    .opacity(draggingListID == groceryList.id ? 0.5 : 1.0)
                             }
                             .buttonStyle(.plain)
                             .draggable(groceryList.id.uuidString) {
@@ -296,11 +296,44 @@ struct ContentView: View {
                                 withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
                                     viewModel.moveList(from: sourceIndex, to: destIndex)
                                 }
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                draggingListID = nil  // ← add this
                                 return true
+                            } isTargeted: { isTargeted in
+                                if isTargeted {
+                                    feedbackGenerator.selectionChanged()
+                                }
                             }
-                            .onDrag {
-                                draggingListID = groceryList.id
-                                return NSItemProvider(object: groceryList.id.uuidString as NSString)
+                            .buttonStyle(.plain)
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 0.3)
+                                    .onEnded { _ in
+                                        feedbackGenerator.prepare()
+                                        feedbackGenerator.selectionChanged()
+                                        draggingListID = groceryList.id
+                                    }
+                            )
+                            .draggable(groceryList.id.uuidString) {
+                                Text(groceryList.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Capsule().fill(AppTheme.primary))
+                            }
+                            .dropDestination(for: String.self) { items, _ in
+                                guard let droppedID = items.first,
+                                      let sourceIndex = viewModel.lists.firstIndex(where: { $0.id.uuidString == droppedID }),
+                                      let destIndex = viewModel.lists.firstIndex(where: { $0.id == groceryList.id }) else { return false }
+                                withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                                    viewModel.moveList(from: sourceIndex, to: destIndex)
+                                }
+                                draggingListID = nil
+                                return true
+                            } isTargeted: { isTargeted in
+                                if isTargeted {
+                                    feedbackGenerator.selectionChanged()
+                                }
                             }
                         }
                     }
