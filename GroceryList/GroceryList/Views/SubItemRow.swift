@@ -14,7 +14,28 @@ struct SubItemRow: View {
     private let deleteRevealWidth: CGFloat = 72
 
     var body: some View {
-        HStack(spacing: 0) {
+        ZStack(alignment: .trailing) {
+            // Delete button fixed in place behind the row
+            Button {
+                withAnimation(.spring(response: 0.25)) {
+                    viewModel.removeSubItem(from: itemID, subID: subItem.id)
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                    Text("Delete")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(width: deleteRevealWidth)
+                .frame(maxHeight: .infinity)
+                .background(Color.red)
+            }
+            .buttonStyle(.plain)
+            .opacity(showDeleteButton ? 1 : 0)
+
+            // Row content slides left over the fixed delete button
             HStack(spacing: 12) {
                 Rectangle()
                     .fill(Color(.systemGray4))
@@ -77,32 +98,9 @@ struct SubItemRow: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-
-            // Delete button sits to the RIGHT, outside the sliding content
-            if showDeleteButton {
-                Button {
-                    withAnimation(.spring(response: 0.25)) {
-                        viewModel.removeSubItem(from: itemID, subID: subItem.id)
-                    }
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "trash.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                        Text("Delete")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .frame(width: deleteRevealWidth)
-                    .frame(maxHeight: .infinity)
-                    .background(Color.red)
-                }
-                .buttonStyle(.plain)
-                .transition(.move(edge: .trailing))
-            }
         }
         .clipped()
         .animation(.spring(response: 0.2, dampingFraction: 0.8), value: swipeOffset)
-        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: showDeleteButton)
     }
     // MARK: - Swipe gesture
     private var swipeGesture: some Gesture {

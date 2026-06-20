@@ -58,15 +58,6 @@ class GroceryListViewModel: ObservableObject {
     
 
     // MARK: - Sharing
-    func exportAsDeepLink() -> URL? {
-        guard let data = try? JSONEncoder().encode(list),
-              let base64 = data.base64EncodedString()
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let name = list.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-        else { return nil }
-        return URL(string: "https://tsortie.github.io/ShopCart/import.html?name=\(name)&data=\(base64)")
-    }
-    
     func moveList(from source: Int, to destination: Int) {
         guard source != destination else { return }
         let currentID = lists[selectedListIndex].id
@@ -79,21 +70,9 @@ class GroceryListViewModel: ObservableObject {
     }
     
     func importFromDeepLink(url: URL) {
-        print("✅ importFromDeepLink called with: \(url.absoluteString.prefix(100))")
-        
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            print("❌ Failed to parse URL components")
-            return
-        }
-        
-        print("✅ Query items: \(components.queryItems ?? [])")
-        
-        guard let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value else {
-            print("❌ No data parameter found")
-            return
-        }
-        
-        print("✅ Data param length: \(dataParam.count)")
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value
+        else { return }
         
         var base64 = dataParam
             .replacingOccurrences(of: "-", with: "+")
@@ -101,19 +80,10 @@ class GroceryListViewModel: ObservableObject {
         let remainder = base64.count % 4
         if remainder > 0 { base64 += String(repeating: "=", count: 4 - remainder) }
         
-        guard let data = Data(base64Encoded: base64) else {
-            print("❌ Failed to decode base64")
-            return
-        }
+        guard let data = Data(base64Encoded: base64),
+              var imported = try? JSONDecoder().decode(GroceryList.self, from: data)
+        else { return }
         
-        print("✅ Decoded data length: \(data.count)")
-        
-        guard var imported = try? JSONDecoder().decode(GroceryList.self, from: data) else {
-            print("❌ Failed to decode GroceryList")
-            return
-        }
-        
-        print("✅ Imported list: \(imported.name)")
         imported.id = UUID()
         lists.append(imported)
         selectedListIndex = lists.count - 1
@@ -130,14 +100,6 @@ class GroceryListViewModel: ObservableObject {
         lists.append(imported)
         selectedListIndex = lists.count - 1
         save()
-    }
-
-    func exportCurrentList() -> URL? {
-        guard let data = try? JSONEncoder().encode(list) else { return nil }
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(list.name).grocerylist")
-        try? data.write(to: tempURL)
-        return tempURL
     }
 
     // MARK: - List management
@@ -264,7 +226,6 @@ class GroceryListViewModel: ObservableObject {
     func toggleSubItem(itemID: UUID, subID: UUID) {
         if let idx = lists[selectedListIndex].items.firstIndex(where: { $0.id == itemID }),
            let subIdx = lists[selectedListIndex].items[idx].subItems.firstIndex(where: { $0.id == subID }) {
-            objectWillChange.send()
             lists[selectedListIndex].items[idx].subItems[subIdx].isChecked.toggle()
             let anyChecked = lists[selectedListIndex].items[idx].subItems.contains(where: { $0.isChecked })
             lists[selectedListIndex].items[idx].isActive = anyChecked ? false : true

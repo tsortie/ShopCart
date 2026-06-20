@@ -165,8 +165,6 @@ struct ContentView: View {
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .contentMargins(.bottom, 120, for: .scrollContent)
-                    .animation(.spring(response: 0.2, dampingFraction: 0.8), value: viewModel.list.items)
-                    .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isAddingItem)
                     .onTapGesture {
                         if isAddingItem { cancelAddItem() }
                     }
@@ -180,12 +178,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .contentMargins(.bottom, 120, for: .scrollContent)
                 
-                .animation(.spring(response: 0.2, dampingFraction: 0.8), value: viewModel.list.items)
-                .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isAddingItem)
-
                 if !isAddingItem && !isAddingSubItem {
                     addButton
                         .padding(.trailing, 20)
@@ -204,6 +197,7 @@ struct ContentView: View {
                             Label("Tap + in the bottom bar for a new list", systemImage: "plus.circle.fill")
                             Label("Search for a list item in the top bar", systemImage: "magnifyingglass")
                             Label("AirDrop/Text lists with a ShopCart user", systemImage: "square.and.arrow.up")
+                            Label("Hold and drag lists to reorder", systemImage: "arrow.left.arrow.right")
                         } label: {
                             Label("Actions", systemImage: "questionmark.circle")
                         }
@@ -218,12 +212,6 @@ struct ContentView: View {
                             shareList()
                         } label: {
                             Label("Share List", systemImage: "square.and.arrow.up")
-                        }
-                        
-                        Button {
-                            showImportPicker = true
-                        } label: {
-                            Label("Import List", systemImage: "square.and.arrow.down")
                         }
 
                         Button(role: .destructive) {
@@ -279,30 +267,7 @@ struct ContentView: View {
                                         Capsule()
                                             .fill(viewModel.selectedListIndex == index ? AppTheme.primary : AppTheme.primary.opacity(0.1))
                                     )
-                            }
-                            .buttonStyle(.plain)
-                            .draggable(groceryList.id.uuidString) {
-                                Text(groceryList.name)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Capsule().fill(AppTheme.primary))
-                            }
-                            .dropDestination(for: String.self) { items, _ in
-                                guard let droppedID = items.first,
-                                      let sourceIndex = viewModel.lists.firstIndex(where: { $0.id.uuidString == droppedID }),
-                                      let destIndex = viewModel.lists.firstIndex(where: { $0.id == groceryList.id }) else { return false }
-                                withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
-                                    viewModel.moveList(from: sourceIndex, to: destIndex)
-                                }
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                draggingListID = nil  // ← add this
-                                return true
-                            } isTargeted: { isTargeted in
-                                if isTargeted {
-                                    feedbackGenerator.selectionChanged()
-                                }
+                                    .opacity(draggingListID == groceryList.id ? 0.5 : 1.0)
                             }
                             .buttonStyle(.plain)
                             .simultaneousGesture(
@@ -524,7 +489,7 @@ struct ContentView: View {
         newItemName = ""
         newItemQuantity = 1
         withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { isAddingItem = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { addFieldFocused = true }
+        addFieldFocused = true
     }
 
     private func commitAddItem() {
@@ -536,7 +501,7 @@ struct ContentView: View {
         withAnimation(.spring(response: 0.2)) {
             viewModel.addItem(name: trimmed, quantity: newItemQuantity)
         }
-        triggerHintsIfNeeded()   // ← add this line
+        triggerHintsIfNeeded()
         newItemName = ""
         newItemQuantity = 1
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { addFieldFocused = true }
@@ -544,13 +509,6 @@ struct ContentView: View {
 
     private func cancelAddItem() {
         guard isAddingItem else { return }
-        addFieldFocused = false
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { isAddingItem = false }
-        newItemName = ""
-        newItemQuantity = 1
-    }
-    
-    private func discardAddItem() {
         addFieldFocused = false
         withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { isAddingItem = false }
         newItemName = ""
@@ -603,7 +561,6 @@ struct ContentView: View {
               let json = String(data: data, encoding: .utf8) else { return }
         
         isSharing = true
-        print("Starting Share")
         
         Task {
             guard let url = URL(string: "https://api.github.com/gists") else {
@@ -617,7 +574,6 @@ struct ContentView: View {
                 await MainActor.run { isSharing = false }
                 return
             }
-            print("✅ Token loaded: \(token.prefix(8))...")
             
             let body: [String: Any] = [
                 "public": false,
@@ -642,8 +598,6 @@ struct ContentView: View {
                 await MainActor.run { isSharing = false }
                 return
             }
-            
-            print("✅ Status: \(httpResponse.statusCode), Gist ID: \(gistID)")
             
             let shareURL = URL(string: "https://tsortie.github.io/ShopCart/import.html?gist=\(gistID)")!
             

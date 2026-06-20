@@ -10,7 +10,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.toddfeliciano.shopcart</string>
+			<string>com.toddfeliciano.ShopCart</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>shopcart</string>
