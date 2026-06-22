@@ -32,6 +32,20 @@ jobs:
           echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PP_PATH
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          - name: Create Secrets.plist
+            env:
+              GITHUB_TOKEN_VALUE: ${{ secrets.GITHUB_TOKEN_SHOPCART }}
+            run: |
+              cat > GroceryList/GroceryList/Secrets.plist << EOF
+              <?xml version="1.0" encoding="UTF-8"?>
+              <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+              <plist version="1.0">
+              <dict>
+                  <key>GitHubToken</key>
+                  <string>${GITHUB_TOKEN_VALUE}</string>
+              </dict>
+              </plist>
+              EOF
       - name: Build and Archive
         run: |
           xcodebuild archive \
