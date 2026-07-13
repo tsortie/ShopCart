@@ -402,7 +402,7 @@ struct ContentView: View {
         if !viewModel.activeItems.isEmpty || isAddingItem {
             SectionHeader(title: "Active", count: viewModel.activeItems.count)
 
-            LazyVStack(spacing: 4) {
+            VStack(spacing: 4) {
                 if isAddingItem {
                     inlineAddRow
                         .id("inlineAddRow")
@@ -424,7 +424,7 @@ struct ContentView: View {
         if !viewModel.inactiveItems.isEmpty {
             SectionHeader(title: "Inactive", count: viewModel.inactiveItems.count)
 
-            LazyVStack(spacing: 4) {
+            VStack(spacing: 4) {
                 ForEach(viewModel.inactiveItems) { item in
                     GroceryItemRow(item: item, viewModel: viewModel, isParentAdding: $isAddingSubItem)
                         .padding(.horizontal, 16)
