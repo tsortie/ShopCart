@@ -1,89 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShopCart — Import List</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-      background: #000;
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .card {
-      background: #1c1c1e;
-      border-radius: 20px;
-      padding: 40px 32px;
-      max-width: 360px;
-      width: 90%;
-      text-align: center;
-    }
-    .icon { font-size: 64px; margin-bottom: 20px; }
-    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-    .list-name {
-      font-size: 20px;
-      font-weight: 600;
-      color: #3B7A57;
-      margin-bottom: 12px;
-    }
-    p {
-      font-size: 15px;
-      color: #aeaeb2;
-      margin-bottom: 32px;
-      line-height: 1.5;
-    }
-    .btn {
-      display: block;
-      background: #3B7A57;
-      color: #fff;
-      text-decoration: none;
-      font-size: 17px;
-      font-weight: 600;
-      padding: 16px 24px;
-      border-radius: 14px;
-      margin-bottom: 12px;
-    }
-    .btn:active { opacity: 0.8; }
-    .sub { font-size: 13px; color: #636366; }
-    .error { color: #ff453a; font-size: 15px; margin-bottom: 16px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon">🛒</div>
-    <h1>ShopCart</h1>
-    <div class="list-name" id="listName">Shared List</div>
-    <p>Someone shared a shopping list with you. Tap below to open it in ShopCart.</p>
-    <div class="error" id="errorMsg" style="display:none">Invalid or missing list data.</div>
-    <a class="btn" id="importBtn" href="#" style="display:none">Import List</a>
-    <p class="sub">Requires ShopCart to be installed</p>
-  </div>
+const params = new URLSearchParams(window.location.search);
+const gistID = params.get("gist");
+const name = params.get("name");
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const data = params.get("data");
-    const name = params.get("name");
+if (name) {
+    document.getElementById("listName").textContent = decodeURIComponent(name);
+}
 
-    if (name) {
-      document.getElementById("listName").textContent = decodeURIComponent(name);
-    }
-
-    if (data) {
-        // Convert URL-safe base64 back to standard base64
-        const standard = data
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
-        const deepLink = "shopcart://import?data=" + encodeURIComponent(standard);
-        document.getElementById("importBtn").href = deepLink;
-        document.getElementById("importBtn").style.display = "block";
-    } else {
-        document.getElementById("errorMsg").style.display = "block";
-    }
-  </script>
-</body>
-</html>
+if (gistID) {
+    fetch("https://api.github.com/gists/" + gistID)
+        .then(r => r.json())
+        .then(gist => {
+            const content = gist.files["list.json"].content;
+            const encoded = btoa(unescape(encodeURIComponent(content)));
+            document.getElementById("importBtn").href = "shopcart://import?data=" + encodeURIComponent(encoded);
+            document.getElementById("importBtn").style.display = "block";
+            const parsed = JSON.parse(content);
+            if (parsed.name) document.getElementById("listName").textContent = parsed.name;
+        })
+        .catch(() => {
+            document.getElementById("errorMsg").style.display = "block";
+        });
+} else {
+    document.getElementById("errorMsg").style.display = "block";
+}
