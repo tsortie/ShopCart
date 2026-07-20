@@ -74,11 +74,15 @@
     }
 
     if (data) {
-      const deepLink = "shopcart://import?data=" + encodeURIComponent(data);
-      document.getElementById("importBtn").href = deepLink;
-      document.getElementById("importBtn").style.display = "block";
+        // Convert URL-safe base64 back to standard base64
+        const standard = data
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+        const deepLink = "shopcart://import?data=" + encodeURIComponent(standard);
+        document.getElementById("importBtn").href = deepLink;
+        document.getElementById("importBtn").style.display = "block";
     } else {
-      document.getElementById("errorMsg").style.display = "block";
+        document.getElementById("errorMsg").style.display = "block";
     }
   </script>
 </body>
