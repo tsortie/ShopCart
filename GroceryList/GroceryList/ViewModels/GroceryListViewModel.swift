@@ -59,10 +59,15 @@ class GroceryListViewModel: ObservableObject {
 
     // MARK: - Sharing
     func moveList(from source: Int, to destination: Int) {
-        guard source != destination else { return }
+        guard source != destination,
+              source >= 0, source < lists.count,
+              destination >= 0, destination < lists.count
+        else { return }
+        
         let currentID = lists[selectedListIndex].id
-        lists.move(fromOffsets: IndexSet(integer: source), toOffset: destination > source ? destination + 1 : destination)
-        // Keep selected list in sync
+        let item = lists.remove(at: source)
+        lists.insert(item, at: destination)
+        
         if let newIndex = lists.firstIndex(where: { $0.id == currentID }) {
             selectedListIndex = newIndex
         }
