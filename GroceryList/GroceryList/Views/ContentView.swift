@@ -601,16 +601,15 @@ struct ContentView: View {
             
             let shareURL = URL(string: "https://tsortie.github.io/ShopCart/import.html?gist=\(gistID)")!
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            await MainActor.run {
                 isSharing = false
                 let av = UIActivityViewController(activityItems: [shareURL], applicationActivities: nil)
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let root = windowScene.windows.first?.rootViewController {
-                    var topVC = root
-                    while let presented = topVC.presentedViewController {
-                        topVC = presented
+                   let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+                   let root = window.rootViewController {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        root.present(av, animated: true)
                     }
-                    topVC.present(av, animated: true)
                 }
             }
         }

@@ -74,11 +74,16 @@ class GroceryListViewModel: ObservableObject {
               let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value
         else { return }
         
+        // Handle both standard and URL-safe base64
         var base64 = dataParam
             .replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
+        
+        // Add padding if needed
         let remainder = base64.count % 4
-        if remainder > 0 { base64 += String(repeating: "=", count: 4 - remainder) }
+        if remainder > 0 {
+            base64 += String(repeating: "=", count: 4 - remainder)
+        }
         
         guard let data = Data(base64Encoded: base64),
               var imported = try? JSONDecoder().decode(GroceryList.self, from: data)
