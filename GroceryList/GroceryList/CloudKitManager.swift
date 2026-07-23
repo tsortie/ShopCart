@@ -9,7 +9,7 @@ extension Notification.Name {
 class CloudKitManager {
     static let shared = CloudKitManager()
 
-    let container = CKContainer(identifier: "iCloud.com.gracehaataja.ShopCart")
+    let container = CKContainer(identifier: "iCloud.com.toddfeliciano.ShopCart")
     private var privateDB: CKDatabase { container.privateCloudDatabase }
     private var sharedDB: CKDatabase { container.sharedCloudDatabase }
     let zoneID = CKRecordZone.ID(zoneName: "ShopCartZone", ownerName: CKCurrentUserDefaultName)
@@ -17,10 +17,13 @@ class CloudKitManager {
     // MARK: - Setup
     func setup() async {
         do {
+            print("DEBUG: Creating CloudKit zone")
             try await privateDB.save(CKRecordZone(zoneID: zoneID))
+            print("DEBUG: Zone created successfully")
             try await setupSubscriptions()
+            print("DEBUG: Subscriptions set up")
         } catch {
-            print("CloudKit setup error: \(error)")
+            print("DEBUG: CloudKit setup error: \(error)")
         }
     }
 

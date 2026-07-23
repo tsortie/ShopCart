@@ -2,20 +2,12 @@ import SwiftUI
 import CloudKit
 
 struct CloudSharingView: UIViewControllerRepresentable {
-    let list: GroceryList
+    let share: CKShare
+    let container: CKContainer
     @Binding var isPresented: Bool
 
     func makeUIViewController(context: Context) -> UICloudSharingController {
-        let controller = UICloudSharingController { _, completion in
-            Task {
-                do {
-                    let (share, container) = try await CloudKitManager.shared.createShare(for: list)
-                    completion(share, container, nil)
-                } catch {
-                    completion(nil, CloudKitManager.shared.container, error)
-                }
-            }
-        }
+        let controller = UICloudSharingController(share: share, container: container)
         controller.availablePermissions = [.allowReadWrite, .allowPrivate]
         controller.delegate = context.coordinator
         return controller
@@ -35,11 +27,12 @@ struct CloudSharingView: UIViewControllerRepresentable {
         }
 
         func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
-            print("Share error: \(error)")
+            print("DEBUG: Share error: \(error)")
             isPresented = false
         }
 
         func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
+            print("DEBUG: Share saved")
             isPresented = false
         }
 

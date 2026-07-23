@@ -1,4 +1,5 @@
 import SwiftUI
+import CloudKit
 
 struct ListDropDelegate: DropDelegate {
     let item: GroceryList
@@ -30,8 +31,7 @@ struct ListDropDelegate: DropDelegate {
 }
 
 struct ContentView: View {
-    
-    @State private var showCloudSharing: Bool = false
+
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
@@ -116,9 +116,6 @@ struct ContentView: View {
                     )
                 }
             }
-        }
-        .sheet(isPresented: $showCloudSharing) {
-            CloudSharingView(list: viewModel.list, isPresented: $showCloudSharing)
         }
         .sheet(isPresented: $showAddList) { addListSheet }
         .sheet(isPresented: $showRenameList) { renameListSheet }
@@ -243,18 +240,38 @@ struct ContentView: View {
                         
                         Button {
                             Task {
-                                // Make sure list is in CloudKit before sharing
-                                if viewModel.list.cloudKitRecordID == nil {
-                                    if let data = try? JSONEncoder().encode(viewModel.list),
-                                       let _ = String(data: data, encoding: .utf8) {
-                                        let recordName = try? await CloudKitManager.shared.save(viewModel.list)
-                                        if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }),
-                                           let name = recordName {
-                                            viewModel.lists[idx].cloudKitRecordID = name
+                                do {
+                                    print("DEBUG: Starting share creation")
+                                    if viewModel.list.cloudKitRecordID == nil {
+                                        let recordName = try await CloudKitManager.shared.save(viewModel.list)
+                                        if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
+                                            viewModel.lists[idx].cloudKitRecordID = recordName
                                         }
                                     }
+                                    let (share, container) = try await CloudKitManager.shared.createShare(for: viewModel.list)
+                                    print("DEBUG: Share created: \(share.url?.absoluteString ?? "no URL")")
+                                    
+                                    await MainActor.run {
+                                        let controller = UICloudSharingController(share: share, container: container)
+                                        controller.availablePermissions = [.allowReadWrite, .allowPrivate]
+                                        controller.modalPresentationStyle = .formSheet
+                                        
+                                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                           let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+                                           let root = window.rootViewController {
+                                            // Wait for menu to fully dismiss before presenting
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                                var topVC = root
+                                                while let presented = topVC.presentedViewController {
+                                                    topVC = presented
+                                                }
+                                                topVC.present(controller, animated: true)
+                                            }
+                                        }
+                                    }
+                                } catch {
+                                    print("DEBUG: Failed to create share: \(error)")
                                 }
-                                showCloudSharing = true
                             }
                         } label: {
                             Label("Collaborate on List", systemImage: "person.2.fill")
