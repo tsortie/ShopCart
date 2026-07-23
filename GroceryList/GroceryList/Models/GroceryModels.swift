@@ -41,4 +41,6 @@ struct GroceryList: Identifiable, Codable {
     var id: UUID = UUID()
     var name: String
     var items: [GroceryItem] = []
+    var cloudKitRecordID: String? = nil
+    var isShared: Bool = false
 }

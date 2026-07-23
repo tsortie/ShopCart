@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		5C1C3E6F2FE332FA00063111 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5C1C3E6E2FE332FA00063111 /* Secrets.plist */; };
+		5C4E5E5D301190900095A4BA /* CloudKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E5E5C301190880095A4BA /* CloudKitManager.swift */; };
+		5C4E5E5F301190BE0095A4BA /* CloudSharingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E5E5E301190B80095A4BA /* CloudSharingView.swift */; };
 		AA000001 /* GroceryListApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100001 /* GroceryListApp.swift */; };
 		AA000002 /* GroceryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100002 /* GroceryModels.swift */; };
 		AA000003 /* GroceryListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100003 /* GroceryListViewModel.swift */; };
@@ -20,6 +22,8 @@
 
 /* Begin PBXFileReference section */
 		5C1C3E6E2FE332FA00063111 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		5C4E5E5C301190880095A4BA /* CloudKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitManager.swift; sourceTree = "<group>"; };
+		5C4E5E5E301190B80095A4BA /* CloudSharingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSharingView.swift; sourceTree = "<group>"; };
 		5C86027F2FE1D23A00EF4AF4 /* GroceryList.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GroceryList.entitlements; sourceTree = "<group>"; };
 		AA100001 /* GroceryListApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroceryListApp.swift; sourceTree = "<group>"; };
 		AA100002 /* GroceryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroceryModels.swift; sourceTree = "<group>"; };
@@ -55,6 +59,8 @@
 		AA400002 /* GroceryList */ = {
 			isa = PBXGroup;
 			children = (
+				5C4E5E5E301190B80095A4BA /* CloudSharingView.swift */,
+				5C4E5E5C301190880095A4BA /* CloudKitManager.swift */,
 				5C86027F2FE1D23A00EF4AF4 /* GroceryList.entitlements */,
 				AA100001 /* GroceryListApp.swift */,
 				AA100009 /* Info.plist */,
@@ -174,6 +180,8 @@
 			files = (
 				AA000001 /* GroceryListApp.swift in Sources */,
 				AA000002 /* GroceryModels.swift in Sources */,
+				5C4E5E5D301190900095A4BA /* CloudKitManager.swift in Sources */,
+				5C4E5E5F301190BE0095A4BA /* CloudSharingView.swift in Sources */,
 				AA000003 /* GroceryListViewModel.swift in Sources */,
 				AA000004 /* Components.swift in Sources */,
 				AA000005 /* SubItemRow.swift in Sources */,
@@ -308,7 +316,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GroceryList/GroceryList.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = NMUNAF53M3;
 				ENABLE_PREVIEWS = YES;
@@ -319,7 +327,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.toddfeliciano.ShopCart;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -335,7 +343,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GroceryList/GroceryList.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = NMUNAF53M3;
 				ENABLE_PREVIEWS = YES;
@@ -346,7 +354,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.toddfeliciano.ShopCart;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

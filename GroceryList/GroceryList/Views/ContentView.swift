@@ -1,4 +1,5 @@
 import SwiftUI
+import CloudKit
 
 struct ListDropDelegate: DropDelegate {
     let item: GroceryList
@@ -30,7 +31,7 @@ struct ListDropDelegate: DropDelegate {
 }
 
 struct ContentView: View {
-    
+
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
@@ -238,9 +239,41 @@ struct ContentView: View {
                         }
                         
                         Button {
-                            shareList()
+                            Task {
+                                do {
+                                    // Mark list as shared before uploading
+                                    if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
+                                        viewModel.lists[idx].isShared = true
+                                    }
+                                    if viewModel.list.cloudKitRecordID == nil {
+                                        let recordName = try await CloudKitManager.shared.save(viewModel.list)
+                                        if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
+                                            viewModel.lists[idx].cloudKitRecordID = recordName
+                                        }
+                                    }
+                                    let (share, container) = try await CloudKitManager.shared.createShare(for: viewModel.list)
+                                    await MainActor.run {
+                                        let controller = UICloudSharingController(share: share, container: container)
+                                        controller.availablePermissions = [.allowReadWrite, .allowPublic]
+                                        controller.modalPresentationStyle = .formSheet
+                                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                           let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+                                           let root = window.rootViewController {
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                                var topVC = root
+                                                while let presented = topVC.presentedViewController {
+                                                    topVC = presented
+                                                }
+                                                topVC.present(controller, animated: true)
+                                            }
+                                        }
+                                    }
+                                } catch {
+                                    print("DEBUG: Failed to create share: \(error)")
+                                }
+                            }
                         } label: {
-                            Label("Share List", systemImage: "square.and.arrow.up")
+                            Label("Collaborate on List", systemImage: "person.2.fill")
                         }
 
                         Button(role: .destructive) {
