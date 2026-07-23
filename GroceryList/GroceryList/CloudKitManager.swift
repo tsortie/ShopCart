@@ -17,29 +17,25 @@ class CloudKitManager {
     // MARK: - Setup
     func setup() async {
         do {
-            print("DEBUG: Creating CloudKit zone")
             try await privateDB.save(CKRecordZone(zoneID: zoneID))
-            print("DEBUG: Zone created successfully")
             try await setupSubscriptions()
-            print("DEBUG: Subscriptions set up")
+            print("DEBUG: CloudKit setup complete")
         } catch {
             print("DEBUG: CloudKit setup error: \(error)")
         }
     }
 
-    // MARK: - Save
+    // MARK: - Save single list
     func save(_ list: GroceryList) async throws -> String {
         let record: CKRecord
 
         if let existingID = list.cloudKitRecordID {
             let recordID = CKRecord.ID(recordName: existingID, zoneID: zoneID)
-            if list.isShared {
-                record = (try? await sharedDB.record(for: recordID)) ?? CKRecord(recordType: "GroceryList", recordID: recordID)
-            } else {
-                record = (try? await privateDB.record(for: recordID)) ?? CKRecord(recordType: "GroceryList", recordID: recordID)
-            }
+            record = (try? await privateDB.record(for: recordID)) ??
+                     CKRecord(recordType: "GroceryList", recordID: recordID)
         } else {
-            record = CKRecord(recordType: "GroceryList", recordID: CKRecord.ID(zoneID: zoneID))
+            record = CKRecord(recordType: "GroceryList",
+                            recordID: CKRecord.ID(zoneID: zoneID))
         }
 
         record["name"] = list.name as CKRecordValue
@@ -47,37 +43,29 @@ class CloudKitManager {
             record["itemsData"] = data as CKRecordValue
         }
 
-        let saved: CKRecord
-        if list.isShared {
-            saved = try await sharedDB.save(record)
-        } else {
-            saved = try await privateDB.save(record)
-        }
+        let saved = try await privateDB.save(record)
         return saved.recordID.recordName
     }
 
-    // MARK: - Fetch
-    func fetchAllLists() async throws -> [GroceryList] {
+    // MARK: - Fetch shared lists only
+    func fetchSharedLists() async throws -> [GroceryList] {
         var lists: [GroceryList] = []
-        let query = CKQuery(recordType: "GroceryList", predicate: NSPredicate(value: true))
-
-        let (privateResults, _) = try await privateDB.records(matching: query, inZoneWith: zoneID)
-        for (_, result) in privateResults {
-            if let record = try? result.get(), let list = makeList(from: record, isShared: false) {
-                lists.append(list)
-            }
-        }
-
         let sharedZones = try await sharedDB.allRecordZones()
+        let query = CKQuery(recordType: "GroceryList",
+                           predicate: NSPredicate(value: true))
+
         for zone in sharedZones {
-            let (sharedResults, _) = try await sharedDB.records(matching: query, inZoneWith: zone.zoneID)
-            for (_, result) in sharedResults {
-                if let record = try? result.get(), let list = makeList(from: record, isShared: true) {
+            let (results, _) = try await sharedDB.records(
+                matching: query,
+                inZoneWith: zone.zoneID
+            )
+            for (_, result) in results {
+                if let record = try? result.get(),
+                   let list = makeList(from: record, isShared: true) {
                     lists.append(list)
                 }
             }
         }
-
         return lists
     }
 
@@ -90,22 +78,24 @@ class CloudKitManager {
 
     // MARK: - Share
     func createShare(for list: GroceryList) async throws -> (CKShare, CKContainer) {
-        guard let recordIDString = list.cloudKitRecordID else { throw CloudKitError.noRecordID }
+        guard let recordIDString = list.cloudKitRecordID else {
+            throw CloudKitError.noRecordID
+        }
         let recordID = CKRecord.ID(recordName: recordIDString, zoneID: zoneID)
         let record = try await privateDB.record(for: recordID)
 
-        if let shareRef = record.share {
-            if let share = try await privateDB.record(for: shareRef.recordID) as? CKShare {
-                share.publicPermission = .readWrite
-                try await privateDB.modifyRecords(saving: [share], deleting: [])
-                return (share, container)
-            }
+        // Return existing share if one exists
+        if let shareRef = record.share,
+           let share = try await privateDB.record(for: shareRef.recordID) as? CKShare {
+            share.publicPermission = .readWrite
+            try await privateDB.modifyRecords(saving: [share], deleting: [])
+            return (share, container)
         }
 
+        // Create new share
         let share = CKShare(rootRecord: record)
         share[CKShare.SystemFieldKey.title] = list.name as CKRecordValue
-        share.publicPermission = .readWrite  // Anyone with the link can edit
-
+        share.publicPermission = .readWrite
         try await privateDB.modifyRecords(saving: [record, share], deleting: [])
         return (share, container)
     }
@@ -113,24 +103,25 @@ class CloudKitManager {
     // MARK: - Accept Share
     func accept(_ metadata: CKShare.Metadata) async throws {
         try await container.accept(metadata)
+        NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
     }
 
     // MARK: - Subscriptions
     private func setupSubscriptions() async throws {
-        let privateSubID = "private-db-changes"
-        let sharedSubID = "shared-db-changes"
+        let privateSubID = "private-changes"
+        let sharedSubID = "shared-changes"
 
-        if let existing = try? await privateDB.allSubscriptions(),
-           existing.contains(where: { $0.subscriptionID == privateSubID }) { return }
+        let existing = (try? await privateDB.allSubscriptions()) ?? []
+        if existing.contains(where: { $0.subscriptionID == privateSubID }) { return }
 
-        let notificationInfo = CKSubscription.NotificationInfo()
-        notificationInfo.shouldSendContentAvailable = true
+        let info = CKSubscription.NotificationInfo()
+        info.shouldSendContentAvailable = true
 
         let privateSub = CKDatabaseSubscription(subscriptionID: privateSubID)
-        privateSub.notificationInfo = notificationInfo
+        privateSub.notificationInfo = info
 
         let sharedSub = CKDatabaseSubscription(subscriptionID: sharedSubID)
-        sharedSub.notificationInfo = notificationInfo
+        sharedSub.notificationInfo = info
 
         try await privateDB.save(privateSub)
         try await sharedDB.save(sharedSub)

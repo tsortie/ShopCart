@@ -35,6 +35,9 @@ struct ContentView: View {
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
+    @State private var activeShare: CKShare? = nil
+    @State private var activeContainer: CKContainer? = nil
+    @State private var showCloudSharing: Bool = false
     @State private var isSharing: Bool = false
     @State private var draggingListID: UUID? = nil
     @State private var showSwipeHint: Bool = false
@@ -115,6 +118,11 @@ struct ContentView: View {
                             .fill(Color(.darkGray))
                     )
                 }
+            }
+        }
+        .sheet(isPresented: $showCloudSharing) {
+            if let share = activeShare, let container = activeContainer {
+                CloudSharingView(share: share, container: container, isPresented: $showCloudSharing)
             }
         }
         .sheet(isPresented: $showAddList) { addListSheet }
@@ -241,32 +249,18 @@ struct ContentView: View {
                         Button {
                             Task {
                                 do {
-                                    // Mark list as shared before uploading
-                                    if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
-                                        viewModel.lists[idx].isShared = true
-                                    }
+                                    // Save to CloudKit first if not already there
                                     if viewModel.list.cloudKitRecordID == nil {
                                         let recordName = try await CloudKitManager.shared.save(viewModel.list)
-                                        if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
-                                            viewModel.lists[idx].cloudKitRecordID = recordName
-                                        }
+                                        viewModel.markAsShared(listID: viewModel.list.id, recordName: recordName)
                                     }
                                     let (share, container) = try await CloudKitManager.shared.createShare(for: viewModel.list)
-                                    await MainActor.run {
-                                        let controller = UICloudSharingController(share: share, container: container)
-                                        controller.availablePermissions = [.allowReadWrite, .allowPublic]
-                                        controller.modalPresentationStyle = .formSheet
-                                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                           let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-                                           let root = window.rootViewController {
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                                var topVC = root
-                                                while let presented = topVC.presentedViewController {
-                                                    topVC = presented
-                                                }
-                                                topVC.present(controller, animated: true)
-                                            }
-                                        }
+                                    activeShare = share
+                                    activeContainer = container
+
+                                    // Present after menu dismisses
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                        showCloudSharing = true
                                     }
                                 } catch {
                                     print("DEBUG: Failed to create share: \(error)")

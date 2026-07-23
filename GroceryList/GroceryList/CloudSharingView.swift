@@ -13,7 +13,8 @@ struct CloudSharingView: UIViewControllerRepresentable {
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UICloudSharingController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UICloudSharingController,
+                                context: Context) {}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(isPresented: $isPresented)
@@ -26,13 +27,14 @@ struct CloudSharingView: UIViewControllerRepresentable {
             _isPresented = isPresented
         }
 
-        func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
+        func cloudSharingController(_ csc: UICloudSharingController,
+                                    failedToSaveShareWithError error: Error) {
             print("DEBUG: Share error: \(error)")
             isPresented = false
         }
 
         func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            print("DEBUG: Share saved")
+            print("DEBUG: Share saved successfully")
             isPresented = false
         }
 
@@ -41,7 +43,7 @@ struct CloudSharingView: UIViewControllerRepresentable {
         }
 
         func itemTitle(for csc: UICloudSharingController) -> String? {
-            return "ShopCart List"
+            "ShopCart List"
         }
     }
 }

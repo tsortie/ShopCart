@@ -25,7 +25,7 @@ struct GroceryItemRow: View {
 
                 if item.isExpanded && item.hasSubItems {
                     VStack(spacing: 0) {
-                        ForEach(item.sortedSubItems) { sub in
+                        ForEach(item.subItems) { sub in
                             SubItemRow(subItem: sub, itemID: item.id, viewModel: viewModel)
                             if sub.id != item.subItems.last?.id {
                                 Divider().padding(.leading, 50)
