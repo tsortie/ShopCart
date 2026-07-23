@@ -31,6 +31,7 @@ struct ListDropDelegate: DropDelegate {
 
 struct ContentView: View {
     
+    @State private var showCloudSharing: Bool = false
     @ObservedObject var viewModel: GroceryListViewModel
     @AppStorage("hasSeenSwipeHint") private var hasSeenSwipeHint: Bool = false
     @AppStorage("hasSeenSubItemHint") private var hasSeenSubItemHint: Bool = false
@@ -115,6 +116,9 @@ struct ContentView: View {
                     )
                 }
             }
+        }
+        .sheet(isPresented: $showCloudSharing) {
+            CloudSharingView(list: viewModel.list, isPresented: $showCloudSharing)
         }
         .sheet(isPresented: $showAddList) { addListSheet }
         .sheet(isPresented: $showRenameList) { renameListSheet }
@@ -238,9 +242,22 @@ struct ContentView: View {
                         }
                         
                         Button {
-                            shareList()
+                            Task {
+                                // Make sure list is in CloudKit before sharing
+                                if viewModel.list.cloudKitRecordID == nil {
+                                    if let data = try? JSONEncoder().encode(viewModel.list),
+                                       let _ = String(data: data, encoding: .utf8) {
+                                        let recordName = try? await CloudKitManager.shared.save(viewModel.list)
+                                        if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }),
+                                           let name = recordName {
+                                            viewModel.lists[idx].cloudKitRecordID = name
+                                        }
+                                    }
+                                }
+                                showCloudSharing = true
+                            }
                         } label: {
-                            Label("Share List", systemImage: "square.and.arrow.up")
+                            Label("Collaborate on List", systemImage: "person.2.fill")
                         }
 
                         Button(role: .destructive) {

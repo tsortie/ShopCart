@@ -29,6 +29,42 @@ class GroceryListViewModel: ObservableObject {
                 self.lists = [GroceryList(name: "Groceries")]
             }
         }
+
+        // CloudKit setup
+        Task {
+            await CloudKitManager.shared.setup()
+            await refreshFromCloudKit()
+        }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloudKitChange),
+            name: .cloudKitDataChanged,
+            object: nil
+        )
+    }
+
+    @objc private func handleCloudKitChange() {
+        Task { await refreshFromCloudKit() }
+    }
+
+    private func refreshFromCloudKit() async {
+        do {
+            let cloudLists = try await CloudKitManager.shared.fetchAllLists()
+            // Merge: CloudKit is source of truth for shared lists, local wins for private
+            for cloudList in cloudLists {
+                if let localIndex = lists.firstIndex(where: { $0.cloudKitRecordID == cloudList.cloudKitRecordID }) {
+                    lists[localIndex] = cloudList
+                } else {
+                    lists.append(cloudList)
+                }
+            }
+            if let data = try? JSONEncoder().encode(lists) {
+                UserDefaults.standard.set(data, forKey: persistenceKey)
+            }
+        } catch {
+            print("CloudKit refresh error: \(error)")
+        }
     }
 
     // MARK: - Current list
@@ -123,14 +159,13 @@ class GroceryListViewModel: ObservableObject {
     @Published var recentlyDeletedList: GroceryList? = nil
 
     func deleteList(at offsets: IndexSet) {
-        // Store the deleted list for undo
         if let index = offsets.first {
             recentlyDeletedList = lists[index]
+            let listToDelete = lists[index]
+            Task { try? await CloudKitManager.shared.delete(listToDelete) }
         }
         lists.remove(atOffsets: offsets)
-        if lists.isEmpty {
-            lists.append(GroceryList(name: "Groceries"))
-        }
+        if lists.isEmpty { lists.append(GroceryList(name: "Groceries")) }
         selectedListIndex = max(0, min(selectedListIndex, lists.count - 1))
         save()
     }
@@ -274,5 +309,21 @@ class GroceryListViewModel: ObservableObject {
         if let data = try? JSONEncoder().encode(lists) {
             UserDefaults.standard.set(data, forKey: persistenceKey)
         }
+        Task { await syncToCloudKit() }
     }
-}
+
+    private func syncToCloudKit() async {
+        for i in 0..<lists.count {
+            do {
+                let recordName = try await CloudKitManager.shared.save(lists[i])
+                if lists[i].cloudKitRecordID != recordName {
+                    lists[i].cloudKitRecordID = recordName
+                }
+            } catch {
+                print("CloudKit save error for \(lists[i].name): \(error)")
+            }
+        }
+        if let data = try? JSONEncoder().encode(lists) {
+            UserDefaults.standard.set(data, forKey: persistenceKey)
+        }
+    }}
