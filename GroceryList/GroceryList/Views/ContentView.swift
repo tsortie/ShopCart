@@ -241,7 +241,10 @@ struct ContentView: View {
                         Button {
                             Task {
                                 do {
-                                    print("DEBUG: Starting share creation")
+                                    // Mark list as shared before uploading
+                                    if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
+                                        viewModel.lists[idx].isShared = true
+                                    }
                                     if viewModel.list.cloudKitRecordID == nil {
                                         let recordName = try await CloudKitManager.shared.save(viewModel.list)
                                         if let idx = viewModel.lists.firstIndex(where: { $0.id == viewModel.list.id }) {
@@ -249,17 +252,13 @@ struct ContentView: View {
                                         }
                                     }
                                     let (share, container) = try await CloudKitManager.shared.createShare(for: viewModel.list)
-                                    print("DEBUG: Share created: \(share.url?.absoluteString ?? "no URL")")
-                                    
                                     await MainActor.run {
                                         let controller = UICloudSharingController(share: share, container: container)
-                                        controller.availablePermissions = [.allowReadWrite, .allowPrivate]
+                                        controller.availablePermissions = [.allowReadWrite, .allowPublic]
                                         controller.modalPresentationStyle = .formSheet
-                                        
                                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                                            let window = windowScene.windows.first(where: { $0.isKeyWindow }),
                                            let root = window.rootViewController {
-                                            // Wait for menu to fully dismiss before presenting
                                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                                 var topVC = root
                                                 while let presented = topVC.presentedViewController {

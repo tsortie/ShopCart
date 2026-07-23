@@ -18,6 +18,7 @@ class GroceryListViewModel: ObservableObject {
     private let persistenceKey = "grocery_lists_v2"
     
     init() {
+        // UserDefaults is ALWAYS loaded first, no matter what
         if let data = UserDefaults.standard.data(forKey: persistenceKey),
            let saved = try? JSONDecoder().decode([GroceryList].self, from: data) {
             self.lists = saved
@@ -29,14 +30,15 @@ class GroceryListViewModel: ObservableObject {
                 self.lists = [GroceryList(name: "Groceries")]
             }
         }
-        
-        // CloudKit setup
+
+        // CloudKit runs in background and NEVER affects local-only lists
         Task { @MainActor in
             await CloudKitManager.shared.setup()
             await refreshFromCloudKit()
-            await syncToCloudKit()
+            // Only sync lists that are already marked as shared
+            await syncSharedListsToCloudKit()
         }
-        
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleCloudKitChange),
@@ -49,6 +51,23 @@ class GroceryListViewModel: ObservableObject {
         Task { await refreshFromCloudKit() }
     }
     
+    private func syncSharedListsToCloudKit() async {
+        let sharedLists = lists.filter { $0.isShared || $0.cloudKitRecordID != nil }
+        for i in 0..<lists.count {
+            guard lists[i].isShared || lists[i].cloudKitRecordID != nil else { continue }
+            do {
+                let recordName = try await CloudKitManager.shared.save(lists[i])
+                await MainActor.run {
+                    if i < lists.count {
+                        lists[i].cloudKitRecordID = recordName
+                    }
+                }
+            } catch {
+                print("DEBUG: CloudKit sync error for \(lists[i].name): \(error)")
+            }
+        }
+    }
+    
     private func refreshFromCloudKit() async {
         do {
             let cloudLists = try await CloudKitManager.shared.fetchAllLists()
@@ -57,12 +76,16 @@ class GroceryListViewModel: ObservableObject {
                     if let localIndex = lists.firstIndex(where: {
                         $0.cloudKitRecordID == cloudList.cloudKitRecordID
                     }) {
-                        if lists[localIndex].items != cloudList.items ||
-                           lists[localIndex].name != cloudList.name {
+                        // Only update if this list came FROM CloudKit originally
+                        if lists[localIndex].isShared {
                             lists[localIndex] = cloudList
                         }
-                    } else if !lists.contains(where: { $0.name == cloudList.name }) {
-                        lists.append(cloudList)
+                    } else if cloudList.isShared {
+                        // Only append lists that are explicitly shared
+                        // Never append lists that could duplicate local ones
+                        if !lists.contains(where: { $0.name == cloudList.name && !$0.isShared }) {
+                            lists.append(cloudList)
+                        }
                     }
                 }
                 if let data = try? JSONEncoder().encode(lists) {
@@ -70,6 +93,7 @@ class GroceryListViewModel: ObservableObject {
                 }
             }
         } catch {
+            // On any CloudKit error, do absolutely nothing to local data
             print("DEBUG: CloudKit refresh error: \(error)")
         }
     }
@@ -315,8 +339,13 @@ class GroceryListViewModel: ObservableObject {
     func save() {
         if let data = try? JSONEncoder().encode(lists) {
             UserDefaults.standard.set(data, forKey: persistenceKey)
+            UserDefaults.standard.set(data, forKey: "\(persistenceKey)_backup")
         }
-        Task { await syncToCloudKit() }
+        // Only push to CloudKit if there are shared lists
+        let hasSharedLists = lists.contains { $0.isShared || $0.cloudKitRecordID != nil }
+        if hasSharedLists {
+            Task { await syncSharedListsToCloudKit() }
+        }
     }
     
     private func syncToCloudKit() async {

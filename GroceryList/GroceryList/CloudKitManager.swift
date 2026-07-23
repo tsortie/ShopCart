@@ -96,13 +96,15 @@ class CloudKitManager {
 
         if let shareRef = record.share {
             if let share = try await privateDB.record(for: shareRef.recordID) as? CKShare {
+                share.publicPermission = .readWrite
+                try await privateDB.modifyRecords(saving: [share], deleting: [])
                 return (share, container)
             }
         }
 
         let share = CKShare(rootRecord: record)
         share[CKShare.SystemFieldKey.title] = list.name as CKRecordValue
-        share.publicPermission = .readWrite
+        share.publicPermission = .readWrite  // Anyone with the link can edit
 
         try await privateDB.modifyRecords(saving: [record, share], deleting: [])
         return (share, container)
