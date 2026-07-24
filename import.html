@@ -66,46 +66,46 @@
     <p class="sub">Requires ShopCart to be installed</p>
   </div>
 
-  <script>
+ <script>
     const params = new URLSearchParams(window.location.search);
     const gistID = params.get("gist");
 
     if (!gistID) {
-      document.getElementById("loadingMsg").style.display = "none";
-      document.getElementById("errorMsg").style.display = "block";
-      document.getElementById("listName").textContent = "Invalid Link";
-    } else {
-fetch("https://api.github.com/gists/" + gistID)
-    .then(function(r) { return r.json(); })
-    .then(function(gist) {
-        if (!gist.files || !gist.files["list.json"]) {
-            throw new Error("No list data found");
-        }
-        const content = gist.files["list.json"].content;
-        const parsed = JSON.parse(content);
-
-        if (parsed.name) {
-            document.getElementById("listName").textContent = parsed.name;
-        }
-
-        // Convert to Uint8Array then base64 to handle unicode correctly
-        const bytes = new TextEncoder().encode(content);
-        let binary = '';
-        bytes.forEach(function(byte) { binary += String.fromCharCode(byte); });
-        const encoded = btoa(binary);
-
-        const deepLink = "shopcart://import?data=" + encodeURIComponent(encoded);
-        document.getElementById("importBtn").href = deepLink;
-        document.getElementById("importBtn").style.display = "block";
-        document.getElementById("loadingMsg").style.display = "none";
-    })
-    .catch(function(err) {
-        console.error(err);
         document.getElementById("loadingMsg").style.display = "none";
         document.getElementById("errorMsg").style.display = "block";
-        document.getElementById("listName").textContent = "Error";
-    });
+        document.getElementById("listName").textContent = "Invalid Link";
+    } else {
+        fetch("https://api.github.com/gists/" + gistID)
+            .then(function(r) { return r.json(); })
+            .then(function(gist) {
+                if (!gist.files || !gist.files["list.json"]) {
+                    throw new Error("No list data found");
+                }
+                const content = gist.files["list.json"].content;
+                const parsed = JSON.parse(content);
+
+                if (parsed.name) {
+                    document.getElementById("listName").textContent = parsed.name;
+                }
+
+                // Encode correctly for Swift's Data(base64Encoded:)
+                const bytes = new TextEncoder().encode(content);
+                let binary = '';
+                bytes.forEach(function(byte) { binary += String.fromCharCode(byte); });
+                const encoded = btoa(binary);
+
+                const deepLink = "shopcart://import?data=" + encodeURIComponent(encoded);
+                document.getElementById("importBtn").href = deepLink;
+                document.getElementById("importBtn").style.display = "block";
+                document.getElementById("loadingMsg").style.display = "none";
+            })
+            .catch(function(err) {
+                console.error(err);
+                document.getElementById("loadingMsg").style.display = "none";
+                document.getElementById("errorMsg").style.display = "block";
+                document.getElementById("listName").textContent = "Error";
+            });
     }
-  </script>
+</script>
 </body>
 </html>
