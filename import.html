@@ -75,33 +75,36 @@
       document.getElementById("errorMsg").style.display = "block";
       document.getElementById("listName").textContent = "Invalid Link";
     } else {
-      fetch("https://api.github.com/gists/" + gistID)
-        .then(function(r) { return r.json(); })
-        .then(function(gist) {
-          if (!gist.files || !gist.files["list.json"]) {
+fetch("https://api.github.com/gists/" + gistID)
+    .then(function(r) { return r.json(); })
+    .then(function(gist) {
+        if (!gist.files || !gist.files["list.json"]) {
             throw new Error("No list data found");
-          }
-          const content = gist.files["list.json"].content;
-          const parsed = JSON.parse(content);
+        }
+        const content = gist.files["list.json"].content;
+        const parsed = JSON.parse(content);
 
-          if (parsed.name) {
+        if (parsed.name) {
             document.getElementById("listName").textContent = parsed.name;
-          }
+        }
 
-          // Encode the JSON content as base64 for the deep link
-          const encoded = btoa(unescape(encodeURIComponent(content)));
-          const deepLink = "shopcart://import?data=" + encodeURIComponent(encoded);
+        // Convert to Uint8Array then base64 to handle unicode correctly
+        const bytes = new TextEncoder().encode(content);
+        let binary = '';
+        bytes.forEach(function(byte) { binary += String.fromCharCode(byte); });
+        const encoded = btoa(binary);
 
-          document.getElementById("importBtn").href = deepLink;
-          document.getElementById("importBtn").style.display = "block";
-          document.getElementById("loadingMsg").style.display = "none";
-        })
-        .catch(function(err) {
-          console.error(err);
-          document.getElementById("loadingMsg").style.display = "none";
-          document.getElementById("errorMsg").style.display = "block";
-          document.getElementById("listName").textContent = "Error";
-        });
+        const deepLink = "shopcart://import?data=" + encodeURIComponent(encoded);
+        document.getElementById("importBtn").href = deepLink;
+        document.getElementById("importBtn").style.display = "block";
+        document.getElementById("loadingMsg").style.display = "none";
+    })
+    .catch(function(err) {
+        console.error(err);
+        document.getElementById("loadingMsg").style.display = "none";
+        document.getElementById("errorMsg").style.display = "block";
+        document.getElementById("listName").textContent = "Error";
+    });
     }
   </script>
 </body>
