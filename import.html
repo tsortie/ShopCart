@@ -41,12 +41,14 @@
       display: block;
       background: #3B7A57;
       color: #fff;
-      text-decoration: none;
+      border: none;
       font-size: 17px;
       font-weight: 600;
       padding: 16px 24px;
       border-radius: 14px;
       margin-bottom: 12px;
+      width: 100%;
+      cursor: pointer;
     }
     .btn:active { opacity: 0.8; }
     .sub { font-size: 13px; color: #636366; }
@@ -58,54 +60,50 @@
   <div class="card">
     <div class="icon">🛒</div>
     <h1>ShopCart</h1>
-    <div class="list-name" id="listName">Loading...</div>
+    <div class="list-name" id="listName">Shared List</div>
     <p>Someone shared a shopping list with you. Tap below to open it in ShopCart.</p>
-    <div class="loading" id="loadingMsg">Fetching list data...</div>
+    <div class="loading" id="loadingMsg">Loading...</div>
     <div class="error" id="errorMsg" style="display:none">Unable to load list. The link may have expired.</div>
-    <a class="btn" id="importBtn" href="#" style="display:none">Import List</a>
+    <button class="btn" id="importBtn" style="display:none">Import List</button>
     <p class="sub">Requires ShopCart to be installed</p>
   </div>
 
- <script>
+  <script>
     const params = new URLSearchParams(window.location.search);
     const gistID = params.get("gist");
 
     if (!gistID) {
-        document.getElementById("loadingMsg").style.display = "none";
-        document.getElementById("errorMsg").style.display = "block";
-        document.getElementById("listName").textContent = "Invalid Link";
+      document.getElementById("loadingMsg").style.display = "none";
+      document.getElementById("errorMsg").style.display = "block";
+      document.getElementById("listName").textContent = "Invalid Link";
     } else {
-        fetch("https://api.github.com/gists/" + gistID)
-            .then(function(r) { return r.json(); })
-            .then(function(gist) {
-                if (!gist.files || !gist.files["list.json"]) {
-                    throw new Error("No list data found");
-                }
-                const content = gist.files["list.json"].content;
-                const parsed = JSON.parse(content);
+      // Fetch gist to get the list name for display
+      fetch("https://api.github.com/gists/" + gistID)
+        .then(function(r) { return r.json(); })
+        .then(function(gist) {
+          if (!gist.files || !gist.files["list.json"]) {
+            throw new Error("No list data found");
+          }
+          const content = gist.files["list.json"].content;
+          const parsed = JSON.parse(content);
+          if (parsed.name) {
+            document.getElementById("listName").textContent = parsed.name;
+          }
+          document.getElementById("loadingMsg").style.display = "none";
+          document.getElementById("importBtn").style.display = "block";
 
-                if (parsed.name) {
-                    document.getElementById("listName").textContent = parsed.name;
-                }
-
-                // Encode correctly for Swift's Data(base64Encoded:)
-                const bytes = new TextEncoder().encode(content);
-                let binary = '';
-                bytes.forEach(function(byte) { binary += String.fromCharCode(byte); });
-                const encoded = btoa(binary);
-
-                const deepLink = "shopcart://import?data=" + encodeURIComponent(encoded);
-                document.getElementById("importBtn").href = deepLink;
-                document.getElementById("importBtn").style.display = "block";
-                document.getElementById("loadingMsg").style.display = "none";
-            })
-            .catch(function(err) {
-                console.error(err);
-                document.getElementById("loadingMsg").style.display = "none";
-                document.getElementById("errorMsg").style.display = "block";
-                document.getElementById("listName").textContent = "Error";
-            });
+          // Pass gist ID directly to app — app fetches and decodes it
+          document.getElementById("importBtn").onclick = function() {
+            window.location.href = "shopcart://gist?id=" + gistID;
+          };
+        })
+        .catch(function(err) {
+          console.error(err);
+          document.getElementById("loadingMsg").style.display = "none";
+          document.getElementById("errorMsg").style.display = "block";
+          document.getElementById("listName").textContent = "Error";
+        });
     }
-</script>
+  </script>
 </body>
 </html>
